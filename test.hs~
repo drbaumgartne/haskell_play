@@ -1,0 +1,18 @@
+-- imports
+import System.IO
+import System.Directory
+import System.Environment
+
+main = do
+    (command, text) <- getArgs
+    commandControl command (unwords text)
+
+-- commandControl
+-- handles the commands
+commandControl :: String -> String -> IO ()
+commandControl "add" str = add str
+--commandControl "del" str = del str
+--commandControl "view" str = view str
+
+-- dumbed down for now
+add str = putStrLn str
