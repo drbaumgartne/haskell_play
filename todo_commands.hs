@@ -7,6 +7,7 @@
 import System.IO
 import System.Directory
 import System.Environment
+import Text.Read
 
 -- thought process for building (at least according to LYAHFGG)
 -- BASICS -> COMPLEX 
@@ -36,13 +37,13 @@ import System.Environment
 
 -- main
 main = do
-    (command:args) <- getArgs   -- remember that getArgs passes [String]; stripping it out with head
-    commandControl command (head args)
+    (command:args) <- getArgs   -- remember that getArgs passes [String]
+    commandControl command args
 
 
 -- commandControl
 -- handles the commands
-commandControl :: String -> String -> IO ()
+commandControl :: String -> [String] -> IO ()
 commandControl "add"     = add 
 commandControl "delete"  = delete
 commandControl "view"    = view
@@ -50,38 +51,52 @@ commandControl _         = usage
 
 -- ADD
 -- add something to the file (defined previously, now just segmenting the code)
-add :: String -> IO ()
-add str = appendFile "todo.txt" (str ++ "\n")
+add :: [String] -> IO ()
+add []      = putStrLn "Command <add> requires an additional argument."
+add (str:_) = appendFile "todo.txt" (str ++ "\n")
 
 -- DELETE
 -- remove something from the list
-delete :: String -> IO ()
-delete str = do
-    oldTodoList <- readFile "todo.txt"
-    let number = read str
-        newTodoList = unlines $ removeItem (number - 1) (lines oldTodoList)
-    (tempFile, tempHandle) <- openTempFile "." "temphandle"
-    hPutStr tempHandle newTodoList
-    hClose tempHandle
-    removeFile "todo.txt"
-    renameFile tempFile "todo.txt"
+delete :: [String] -> IO ()
+delete []      = delErr
+delete (str:_) =
+    if isValidNumber str
+        then do oldTodoList <- readFile "todo.txt"
+                let number = read str
+                    newTodoList = unlines $ removeItem (number - 1) (lines oldTodoList)
+                (tempFile, tempHandle) <- openTempFile "." "temphandle"
+                hPutStr tempHandle newTodoList
+                hClose tempHandle
+                removeFile "todo.txt"
+                renameFile tempFile "todo.txt"
+         else do delErr
 
 -- VIEW
 -- print out the beautified version of the list
-view :: String -> IO ()
+view :: [String] -> IO ()
 view _ = do
     contents <- readFile "todo.txt"
     mapM_ putStrLn $ enumList contents
 
 -- USAGE
 -- anything not add, del, or view, we'll just exit
-usage :: String -> IO ()
+usage :: [String] -> IO ()
 usage _ = do
     putStrLn "Usage: [command>] [\"text\"]."
     putStrLn "Commands: add, delete, view"
 
 
 -- helper functions
+
+-- delErr :: error message for delete
+delErr :: IO ()
+delErr =  putStrLn "Command <delete> requires a number."
+
+-- isValidNumber :: is the string a number and >= 1
+isValidNumber :: String -> Bool
+isValidNumber s = case readMaybe s of
+    Just n -> n >= 1
+    _      -> False
 
 -- enumList :: convert the read file into lines and add contextual information
 enumList :: String -> [String]
